@@ -100,7 +100,38 @@ $$
 
 如何求R？——协方差矩阵的特征向量就是R
 
+![image.png](https://s2.loli.net/2023/03/13/5fS3gRHb6hwqlY1.png)
 
+![image.png](https://s2.loli.net/2023/03/13/cVwlpsHzG4UBAWe.png)
+
+![image.png](https://s2.loli.net/2023/03/13/gRDQczYIGAUaL2e.png)
+
+对于一组白数据$D$：
+
+- 拉伸时，只有对角线元素（方差）变化
+- 旋转时，协方差矩阵所有元素都变化
+
+![image.png](https://s2.loli.net/2023/03/13/wCkbqW9hP2HfN35.png)
 
 #### ii. 如何求
 
+**协方差矩阵的特征向量就是R**
+
+![image.png](https://s2.loli.net/2023/03/13/sVgEh5HxktfRBbu.png)
+$$
+C'=\frac1{n-1}D'D'^T
+=\frac1{n-1}RSD(RSD)^T
+=\frac1{n-1}RSDD^TS^TR^T\\
+其中\frac1{n-1}DD^T=C（白数据的协方差矩阵）=E\\
+\therefore C'=RSS^TR^T\\
+其中S为对角阵,S=S^T,R为正交阵,R^T=R^{-1}\\
+令L=SS^T=\begin{bmatrix}a^2&0\\0&b^2\end{bmatrix}\\
+\therefore C'=RLR^{-1}
+$$
+![image.png](https://s2.loli.net/2023/03/13/I58tjOzwlgJY7bv.png)
+
+![image.png](https://s2.loli.net/2023/03/13/9DN4mjhvgOtq2Sr.png)
+
+### (3). PCA与SVD的关系
+
+由于在SVD中，V是$M^TM$的特征向量，而PCA主成分向量R定义为协方差矩阵$C=\frac1{1-n}M^TM$的特征向量，因此V与R为同一方向
