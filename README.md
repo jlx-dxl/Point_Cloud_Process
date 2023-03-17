@@ -379,4 +379,57 @@ $$
 ![image.png](https://s2.loli.net/2023/03/16/6aUi8zxZWL1yO7D.png)
 
 - 由于排序较为复杂和耗时，设计用一个hash映射，将$(h_x,h_y,h_z)$映射到一个值$G_i\in\{G_1,\dots,G_m\}$，
-- 当hash function选取不当时，可能会出现conflict，意为：$hash(h_x,h_y,h_z)=hash(h_x',h_y',h_z')$，但$h_x\ne h_x'orh_y\ne h_y'orh_z\ne h_z'$
+- 当hash function选取不当时，可能会出现conflict，意为：$hash(h_x,h_y,h_z)=hash(h_x',h_y',h_z')$，但$h_x\ne h_x'orh_y\ne h_y'orh_z\ne h_z'$ 如何解决？
+
+#### iii. Farthest Point Sampling (FPS)
+
+![image.png](https://s2.loli.net/2023/03/17/OCBPLcbTHGh8iMA.png)
+
+1. 随机选取一个点加入FPS set(F)
+2. 从原始点云P中找到离它最远的点加入F
+3. 遍历P-F中的点，找到与F中的点的最小值最大的一个点，加入F
+4. 循环3，直到F中有所需数目的点
+
+#### iiii. Normal Space Sampling (NSS)
+
+每一个点都有一个法向量，每一个法向量都有一个方向，把这些法向量normalize后可以得到一个球面（各个方向分布不均），在法向量空间中（球面），等分为若干份，从每份中保留一定数目的法向量（这时球面内各个方向的法向量数目分布均匀），根据法向量的删减与保留信息处理原始点云
+
+优点：可以保留精细结构（点云对齐）
+
+#### iv. Learning Based Sample
+
+1. Learning to Sample
+
+   ![image.png](https://s2.loli.net/2023/03/17/gefhZtmNdRJxyOs.png)
+
+   - 设计一个降采样网络S-NET
+   - 对降采样前后的点云执行特定任务（例如目标识别）
+   - 比较降采样前后的识别结果（Task Loss）
+   - 根据这两者的差别调整S-NET，直到达到两者近似
+
+### (4). 上采样
+
+#### i. Bilateral Filter
+
+1. 高斯滤波在模糊图像的同时也会抹除边缘信息
+
+   ![image.png](https://s2.loli.net/2023/03/17/7fK3vhXqVDxobYB.png)
+
+2. 双边滤波在模糊细节的同时会保留大致的边缘信息
+
+   ![image.png](https://s2.loli.net/2023/03/17/e5TYGBWhaNuv471.png)
+
+   ![image.png](https://s2.loli.net/2023/03/17/ALjwCy79W4bZ1Dx.png)
+
+   对P点的像素强度$I_p$，遍历其邻域$S$内的点$q$
+
+   - 距离项$G_{\sigma_s}(\norm{p-q})$表示两像素的距离对$I_p$的影响，越远（即$\norm{p-q}$越大），影响越小
+   - 强度项$G_{\sigma_r}(I_p-I_q)$表示两像素的强度差对$I_p$的影响，相差越大，影响越小
+   - W为归一化项
+
+3. 在深度图中应用：
+
+   ![image.png](https://s2.loli.net/2023/03/17/NX2y9B58coISvtO.png)
+
+4. 在多传感器融合中，将点云深度信息融合到图像上后，图像上的深度信息是稀疏的，对其运用双边滤波，可以有效的将深度信息稠密的表达在全图上，并且保证一定的准确率
+
