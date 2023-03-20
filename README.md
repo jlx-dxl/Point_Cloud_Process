@@ -433,3 +433,153 @@ $$
 
 4. 在多传感器融合中，将点云深度信息融合到图像上后，图像上的深度信息是稀疏的，对其运用双边滤波，可以有效的将深度信息稠密的表达在全图上，并且保证一定的准确率
 
+---
+
+# III. Nearest Neighbor Problem
+
+## 1. Binary Search Tree (用于解决一维数据的NN Problem)
+
+### (1). K-NN and Raius-NN
+
+![image.png](https://s2.loli.net/2023/03/20/g9G1v8eMDL62kEm.png)
+
+### (2).  二叉树基本数据结构
+
+1. 一个Node最多有两个Child Node
+2. 一个Node左边的Child Node一定比自身小，右边的Child Node一定比自身大
+3. eg. <img src="https://s2.loli.net/2023/03/20/uWvqtwlRLo8G6Kn.png" alt="image.png" style="zoom:50%;" />
+
+### (3). 代码构建
+
+#### i. 类：结点
+
+<img src="https://s2.loli.net/2023/03/20/Q2zLFqE4Nx6H7my.png" alt="image.png" style="zoom:50%;" />
+
+其中：
+
+- slef.left存放left child node；
+- self.right存放right chlid node；
+- self.key存放当前node的值；
+- self.value存放当前node在原lst中的索引；
+
+#### ii. 函数：建树（需要先找到Median作为Root Node，这样建出的树最balance）
+
+<img src="https://s2.loli.net/2023/03/20/JzyA8MXRgWVfE63.png" alt="image.png" style="zoom:60%;" />
+
+<img src="https://s2.loli.net/2023/03/20/6E7p5VrhciaFToW.png" alt="image.png" style="zoom:60%;" />
+
+#### iii. 函数：搜索（给定一个key值，查找树中是否有key值等于此值的Node）
+
+<img src="https://s2.loli.net/2023/03/20/W7snB2Qapkr4t1Z.png" alt="image.png" style="zoom:67%;" />
+
+#### iv. 函数：遍历树
+
+<img src="https://s2.loli.net/2023/03/20/9TZPQwUStqyvo2R.png" alt="image.png" style="zoom:67%;" />
+
+其中：
+
+- inorder的遍历方法会将所有Nodes按Key值从小到大排序
+- preorder用于复制Tree
+- postorder用于删除结点
+
+### (4). 用二叉树解决1-NN问题
+
+![image.png](https://s2.loli.net/2023/03/20/yIKUXmE2i9Alrdc.png)
+
+1. 找到Node 8，维护worst distance=11-8=3；
+2. 因为11>8，所以访问Node 8的Right Child；
+3. 找到Node 10，因为|11-10|<worst distance=3，所以维护worst distance=11-10=1；
+4. 因为11>10，所以访问Node 10的Right Child；
+5. 找到Node 14， 因为|11-14|>worst distance=1，所以worst distance不变；
+6. 因为11<14，所以访问Node 14的Left Child；
+7. 找到Node 13，因为|11-13|>worst distance=1，所以worst distance不变；
+8. 因为11<13，所以访问Node 13的Left Child；
+9. 因为Node 13的Left Child=None，完成查找；
+
+### (5). 用二叉树解决k-NN问题
+
+<img src="https://s2.loli.net/2023/03/20/N7VwgkJ8i95qA3U.png" alt="image.png" style="zoom:80%;" />
+
+1. 初始化一个容器（K维的向量，每个值都是inf）（且这个容器总是从小到大排序的）
+2. 按1-NN中的方法搜索树（worst distance总是这个向量最末尾的值）：
+   1. 当Container未满时，将每一个遍历到的点都加入容器
+   2. 当Container已满时，每遍历到一个点，根据其与目标点的距离，维护该容器
+
+![image.png](https://s2.loli.net/2023/03/20/53biAEjwCGl1JXM.png)
+
+![image.png](https://s2.loli.net/2023/03/20/om1jASft4eawqNZ.png)
+
+### (6). 用二叉树解决Radius-NN问题
+
+令Worst Distance=Radius即可
+
+## 2. KD-Tree (K-Demensions Search Tree)
+
+基本思路是在每个维度上进行BST分割
+
+leaf_size参数：分割到最后每个cell内Points的个数小于leaf_size则不再分割
+
+### (1). 切割策略
+
+- 每个维度交替切
+- 根据点的分布特征自适应的切
+
+![image.png](https://s2.loli.net/2023/03/20/7frsB3v8bIqLAtH.png)
+
+### (2). 切割过程（建树过程）
+
+| 切割结果                                                     | 建树结果                                                     | 注释                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![image.png](https://s2.loli.net/2023/03/20/TSZWNitzsLydGjn.png) |                                                              |                                                              |
+| ![image.png](https://s2.loli.net/2023/03/20/yT96Uq7Eo5Yfj4p.png) | ![image.png](https://s2.loli.net/2023/03/20/WleLd4BU89AYgvK.png) | Node 1:<br />n1.points_indexes={a,b,c,d,e,f,g,h,i}<br />n1.is_leaf=False<br />n1.axis=x<br />n1.value=$x_{s_1}$<br />n1.left=Node whose points_indexes is {a,b,d,e,g}($x<x_{s_1}$的点的集合)<br />n1.reight=Node whose points_indexes is {i,h,f,c}($x>x_{s_1}$的点的集合)<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/SDKxhWYfv7aglUp.png) | ![image.png](https://s2.loli.net/2023/03/20/Rm6PiZhOBJKuFg7.png) | Node 2:<br />n2.points_indexes={a,b,d,e,g}<br />n2.is_leaf=False<br />n2.axis=y<br />n2.value=$y_{s_2}$<br />n2.left=Node whose points_indexes is {a,b}($y<y_{s_2}$的点的集合)<br />n2.right=Node whose points_indexes is {d,e,g}($y>y_{s_2}$的点的集合)<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/INckotvbJCuKPDf.png) | ![image.png](https://s2.loli.net/2023/03/20/y46sTRoBenJcUkI.png) | Node 3:<br />n3.points_indexes={a,b}<br />n3.is_leaf=False<br />n3.axis=x<br />n3.value=$x_{s_3}$<br />n3.left=Node whose points_indexes is {a}<br />n3.right=Node whose points_indexes is {b} |
+| ![image.png](https://s2.loli.net/2023/03/20/t6zAXewl3pFGMWo.png) | ![image.png](https://s2.loli.net/2023/03/20/YSjQKLUbJV17deP.png) | Node 4<br />n4.points_indexes={a}<br />n4.is_leaf=True<br />n4.axis=None<br />n4.value=None<br />n4.left=None<br />n4.right=None<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/SWJFcauUmQEdhzC.png) | ![image.png](https://s2.loli.net/2023/03/20/qwYJtiMnE7FSfXd.png) | Node 5<br />n5.points_indexes={b}<br />n5.is_leaf=True<br />n5.axis=None<br />n5.value=None<br />n5.left=None<br />n5.right=None<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/EFnmf3RS4UL9eZs.png) | ![image.png](https://s2.loli.net/2023/03/20/ChRk9N6SbJFqEaK.png) | Node 6<br />n6.points_indexes={d,e,g}<br />n6.is_leaf=False<br />n6.axis=y<br />n6.value=$y_{s_4}$<br />n6.left=Node whose points_indexes is {d,e}($y<y_{s_4}$的点的集合)<br />n6.right=Node whose points_indexes is {g}($y>y_{s_4}$的点的集合)<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/zpTSk5HCchyjKRD.png) | ![image.png](https://s2.loli.net/2023/03/20/YfBN4W7ahDXnkIp.png) | Node 7<br />n7.points_indexes={d,e}<br />n7.is_leaf=False<br />n7.axis=x<br />n7.value=$x_{s_5}$<br />n7.left=Node whose points_indexes is {d}($x<x_{s_5}$的点的集合)<br />n7.right=Node whose points_indexes is {e}($x>x_{s_5}$的点的集合)<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/OL2waCfmj1JtiyI.png) | ![image.png](https://s2.loli.net/2023/03/20/lhYEpa1BT6vycbe.png) | Node 8<br />n4.points_indexes={d}<br />n4.is_leaf=True<br />n4.axis=None<br />n4.value=None<br />n4.left=None<br />n4.right=None<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/oBkuWfGvtRCe92X.png) | ![image.png](https://s2.loli.net/2023/03/20/UMVyZCESiG68bOd.png) | Node 9<br />n4.points_indexes={e}<br />n4.is_leaf=True<br />n4.axis=None<br />n4.value=None<br />n4.left=None<br />n4.right=None<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/WjqzeuTdSO9BJKI.png) | ![image.png](https://s2.loli.net/2023/03/20/YVzA3xDoRG46JHQ.png) | Node 10<br />n4.points_indexes={a}<br />n4.is_leaf=True<br />n4.axis=None<br />n4.value=None<br />n4.left=None<br />n4.right=None<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/kOph6LKcXNM7Sda.png) | ![image.png](https://s2.loli.net/2023/03/20/jv31PUGFMalmn4u.png) | Node 11<br />n11.points_indexes={i,h,f,c}<br />n11.is_leaf=False<br />n11.axis=y<br />n11.value=$y_{s_6}$<br />n11.left=Node whose points_indexes is {c,f}($y<y_{s_6}$的点的集合)<br />n11.right=Node whose points_indexes is {i,h}($y>y_{s_6}$的点的集合)<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/J4fGxlyLcI1mbod.png) | ![image.png](https://s2.loli.net/2023/03/20/clQLVtm7SrXY5Mv.png) | Node 12<br />n12.points_indexes={c,f}<br />n12.is_leaf=False<br />n12.axis=x<br />n12.value=$x_{s_7}$<br />n12.left=Node whose points_indexes is {c}($x<x_{s_7}$的点的集合)<br />n12.right=Node whose points_indexes is {f}($x>x_{s_7}$的点的集合)<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/AOaQLWJenqIpfXS.png) | ![image.png](https://s2.loli.net/2023/03/20/EN3BR6HTsYDXLKA.png) | Node 13<br />n4.points_indexes={c}<br />n4.is_leaf=True<br />n4.axis=None<br />n4.value=None<br />n4.left=None<br />n4.right=None<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/AjQKIuHPVUDqokw.png) | ![image.png](https://s2.loli.net/2023/03/20/tFDYUxnV8gATBWf.png) | Node 14<br />n4.points_indexes={f}<br />n4.is_leaf=True<br />n4.axis=None<br />n4.value=None<br />n4.left=None<br />n4.right=None<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/4DHc5Xxb9jRorqv.png) | ![image.png](https://s2.loli.net/2023/03/20/XfETrJjPpDtncbd.png) | Node 15<br />n15.points_indexes={i,h}<br />n15.is_leaf=False<br />n15.axis=y<br />n15.value=$y_{s_8}$<br />n15.left=Node whose points_indexes is {c,f}($y<y_{s_8}$的点的集合)<br />n15.right=Node whose points_indexes is {i,h}($y>y_{s_8}$的点的集合)<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/CybXFLjB7spQqvV.png) | ![image.png](https://s2.loli.net/2023/03/20/ZFkoUs9Xd5InpmP.png) | Node 16<br />n4.points_indexes={h}<br />n4.is_leaf=True<br />n4.axis=None<br />n4.value=None<br />n4.left=None<br />n4.right=None<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/CIhkGVfu56qeyBZ.png) | ![image.png](https://s2.loli.net/2023/03/20/71tJfknVC3DxSLX.png) | Node 17<br />n4.points_indexes={i}<br />n4.is_leaf=True<br />n4.axis=None<br />n4.value=None<br />n4.left=None<br />n4.right=None<br /> |
+
+### (3). 代码构建
+
+#### i. 结点的表达
+
+![image.png](https://s2.loli.net/2023/03/20/RePG8EoaSzBAF1D.png)
+
+#### ii. 函数：建树
+
+![image.png](https://s2.loli.net/2023/03/20/okcAL7SsMvpq19i.png)
+
+每次递归开始时：
+
+1. 先判断node.points（从上一层递归处能够得到points list）的个数是否大于leaf size
+   1. 如果大于，继续下一步
+   2. 如果小于，return当前node
+2. 如果大于，说明需要分割，则选定一个维度（利用axis_round_robin函数进行轮转），将points在这个维度上进行排序，找到中间值，从onset到median传给left node，从median到end传给right node
+   - 在应用中可以用（取平均值+逐一和平均值作比较）的方法来分割left和right，这样可以取消排序，加快速度
+
+### (4). 用KD-Tree进行k-NN查找
+
+关键：维护一个worst distance（与BST一样，维护一个K维向量，其末位维护的就是worst distance（动态变化的））
+
+如何判断是否查找一个区域（是否访问一个node）？（对每个维度而言）
+
+![image.png](https://s2.loli.net/2023/03/20/6ZPJ92VjuopNTmS.png)
+
+1. 如果query node在这个区域内，要查找
+2. 如果query node在这个维度上的距离与这个node的分割value之差小于worst distance，要查找
+
+![image.png](https://s2.loli.net/2023/03/20/3LjPQk8bsMIytKh.png)
+
+### (5). 用KD-Tree进行Radius-NN查找
+
+令Worst Distance=Radius即可
