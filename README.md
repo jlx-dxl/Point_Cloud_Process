@@ -583,3 +583,73 @@ leaf_size参数：分割到最后每个cell内Points的个数小于leaf_size则�
 ### (5). 用KD-Tree进行Radius-NN查找
 
 令Worst Distance=Radius即可
+
+---
+
+## 3. Octree 
+
+### (1). 构建（以四叉树为例）
+
+| 构建过程 (leaf_size=1)                                       | 建图过程                                                     | 注释                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![image.png](https://s2.loli.net/2023/03/20/fN8IY4cPBOVFKqh.png) | ![image.png](https://s2.loli.net/2023/03/20/r1eSOlBWVTzIiRG.png) | 构建一个最大的cube，包围所有points（各个维度的bounding）     |
+| ![image.png](https://s2.loli.net/2023/03/20/YbQDIkGzXhfHR1v.png) | ![image.png](https://s2.loli.net/2023/03/20/p1Y3rMZNTCjbRLd.png) | 四等分上一个cube，将点划分到所属的subcube中，判断每个subcube中的点的个数<br />=0则置空<br />=leaf_size则置为node<br />>leaf_size则继续划分<br /> |
+| ![image.png](https://s2.loli.net/2023/03/20/NFEDO2RVzvsrSYy.png) | ![](https://s2.loli.net/2023/03/20/j3sgyf7LcVJ5lpC.png)      |                                                              |
+| ![image.png](https://s2.loli.net/2023/03/20/w3PJOTcGvyHDm2q.png) | ![image.png](https://s2.loli.net/2023/03/20/KEROZ4hfFkTCsJg.png) |                                                              |
+
+终止条件：
+
+- leaf_size
+- min_extent：cube的最小边长，在实际中可能出现多个点坐标一样的情况，这样的话如果用leaf_size将永远无法完成建树
+
+### (2). 代码构建
+
+#### i. Octant的表达
+
+![image.png](https://s2.loli.net/2023/03/20/QnNMbtkvoVh9s7X.png)
+
+#### ii. 建树
+
+![image.png](https://s2.loli.net/2023/03/20/xV6tE1G2YLXuDjn.png)
+
+### (3). 用Octree进行k-NN查找
+
+#### i. 主体函数
+
+关键：维护一个worst distance（与BST一样，维护一个K维向量，其末位维护的就是worst distance（动态变化的））
+
+![image.png](https://s2.loli.net/2023/03/20/CTseO1KGvxqM7Rg.png)
+
+#### ii. 辅助函数1：判断是否可以提前终止搜索（如果一个octant能把以worst_distance为半径的球完全包围）
+
+![image.png](https://s2.loli.net/2023/03/20/E326bXZkTy5MjOm.png)
+
+在各个维度上都满足：蓝色(Extent)>绿色(query-actant.center)+红色(radius即worst_distance)
+
+#### ii. 辅助函数2：判断一个octant是否和以worst_distance为半径的球有重叠
+
+![image.png](https://s2.loli.net/2023/03/21/znT58p4sL7Eqvf6.png)
+
+1. 在任何维度上，绿色>蓝色+红色，则必不会重叠
+
+   <img src="C:/Users/Administrator/AppData/Roaming/Typora/typora-user-images/image-20230321094354915.png" alt="image-20230321094354915" style="zoom:50%;" />
+
+2. 不满足1.的情况下，在至少两个维度上，球的中心在octant的bounding内（蓝色>红色）
+
+   ![image.png](https://s2.loli.net/2023/03/21/ewNA8oL1jisyluO.png)
+
+3. 在不满足1.的情况下，球与角点的距离（绿色-蓝色）<半径，（在某个维度上若绿色<蓝色，将其置为0），因此此情况可以囊括对棱和角点重叠的检测
+
+   <img src="https://s2.loli.net/2023/03/21/iJXgeOhUxjaEL1s.png" alt="image.png" style="zoom:50%;" />
+
+   
+
+### (4). 用Octree进行Radius-NN查找
+
+#### i. 固定worst_distance
+
+#### ii. 加速策略：函数：检测包围
+
+如果一个octant被query ball完全包围，那么这个octant不用再进行细分，将其中的点全部纳入解集即可
+
+![image.png](https://s2.loli.net/2023/03/21/ERHx1o6GuqCeXmy.png)
