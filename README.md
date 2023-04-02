@@ -653,3 +653,387 @@ leaf_size参数：分割到最后每个cell内Points的个数小于leaf_size则�
 如果一个octant被query ball完全包围，那么这个octant不用再进行细分，将其中的点全部纳入解集即可
 
 ![image.png](https://s2.loli.net/2023/03/21/ERHx1o6GuqCeXmy.png)
+
+---
+
+# IV. Clustering
+
+## 1. 常见的聚类算法及效果
+
+![image.png](https://s2.loli.net/2023/03/31/bIzDyPlfBKW1Chi.png)
+
+---
+
+## 2. 基础数学知识
+
+### (1). Joint Probability
+
+联合概率：两个事件同时发生的概率
+
+![image.png](https://s2.loli.net/2023/03/31/7ZyGQubS6AeBaD1.png)
+
+---
+
+### (2). Marginalization
+
+边缘分布：两个事件各自的概率分布
+
+![image.png](https://s2.loli.net/2023/03/31/vPHfmDeZrK1wXV9.png)
+
+![image.png](https://s2.loli.net/2023/03/31/u8ePoThVsJpYdRH.png)
+
+$p(x),p(y)$依旧是合法的概率分布（即总和为1）
+
+---
+
+### (3). Conditional Probability
+
+![image.png](https://s2.loli.net/2023/03/31/8kuc2P13Cd57pgb.png)
+
+直接取出的切片$p(x,Y=y^*)$不是合法的概率分布，需要进行归一化得到概率分布$P(x|Y=y^*)$
+
+---
+
+### (4). Bayes' Probability Theorem
+
+![image.png](https://s2.loli.net/2023/03/31/o6uqlLCyE2t5knD.png)
+
+![image.png](https://s2.loli.net/2023/03/31/1hn82Zj73KPNArw.png)
+
+---
+
+### (5). Directed Graphical Model (DGM)
+
+![image.png](https://s2.loli.net/2023/03/31/qReHVXLUhAxdOg5.png)
+
+有向图用于表示有关联的两个事件的条件概率；相对应的无连接的两个节点相互独立，他们的联合概率即为两者各自概率的乘积；
+
+扩展：Markov Assumption：当一个结点给定了它的父结点时，它只与自己的子节点有关，与其他节点都相互独立，如下图：
+
+<img src="https://s2.loli.net/2023/03/31/tq8JoXAfeypFmna.png" alt="image.png" style="zoom:50%;" />
+
+---
+
+### (6). Undirected Graphical Model (UGM)
+
+![image.png](https://s2.loli.net/2023/03/31/Amnt1frYgLEF8hi.png)
+
+---
+
+### (7). Lagrange Multiplier
+
+问题：求二元函数z=f(x,y)在条件φ(x,y)=0下的极值
+
+解法：
+
+<img src="https://s2.loli.net/2023/03/31/toKxXOw3mN6cfsJ.png" alt="image.png" style="zoom:150%;" />
+
+直观理解：
+
+![image.png](https://s2.loli.net/2023/03/31/EtBN8askuKJF5vL.png)
+
+沿着g(x,y)=c曲线找f(x,y)的最大值，该点的特征是在该点处f(x,y)和g(x,y)相切（梯度方向相同）
+
+---
+
+## 3. K-Means
+
+### (1). 基本步骤
+
+1. 随机初始化K个中心点
+2. 将每个数据点分配到一个K中心点下（Expectation）
+3. 将K更新为每个类的坐标均值中心（Maximization）
+4. 重复2，3
+
+---
+
+### (2). 数学解释
+
+<img src="https://s2.loli.net/2023/03/31/YfNrbGghcSltWdL.png" alt="image.png" style="zoom:50%;" />
+
+$r_{nk}$是布尔矩阵$R_{NK}$的第$(n,k)$个元素，代表第n个点是否属于第k类
+
+<img src="https://s2.loli.net/2023/03/31/M5rsEnq2tvNfRgX.png" alt="image.png" style="zoom:50%;" />
+
+- Expectation Step是固定中心$\mu_k$去解$R_{NK}$
+- Maximization Step是固定分类$R_{NK}$去优化中心$\mu_k$
+
+---
+
+#### i. E Step
+
+对每一个点$x_n$，找到距离最近的一个中心$\mu_k$，得到它的k，将$r_{nk}$置为1，将$r_{n:}$置为0
+
+#### ii. M Step
+
+当$r_{nk}$固定后，J是一个只与$\mu_k$有关的函数，要求它的最小值，即令一阶导为0即可；
+
+对每个$\mu_k$单独考虑：
+$$
+for\ k\ in\ K:\\2\sum^N_{n=1}r_{nk}(x_N-\mu_k)=0\\\mu_k=\frac{\sum^nr_{nk}x_n}{\sum^Nr_{nk}}
+$$
+**一个类的中心点=这个类的所有点的平均值**
+
+#### iii. 终止条件
+
+1. $r_nk$停止变化
+2. 迭代次数限制
+
+
+
+![image.png](https://s2.loli.net/2023/03/31/EX5xuN1wjMabHKI.png)
+
+---
+
+### (3). 进阶技巧
+
+![image.png](https://s2.loli.net/2023/03/31/NpY8uPaKyiheDqk.png)
+
+---
+
+### (4). K-Medoids
+
+![image.png](https://s2.loli.net/2023/03/31/ovKztAismYBd4E1.png)
+
+$\Upsilon(x,\mu)$是一个复杂的离散函数，实现该算法的具体步骤是：
+
+- E步骤不变
+- M步骤由求平均值改为：遍历当前类中的所有数据点，计算它到该类中其他所有点的距离之和，选择最小的一个
+
+---
+
+### (5). Limitations 局限性
+
+1. K不知道
+2. 对噪声很敏感
+3. hardmax分类，缺乏置信度（解决：GMM）
+
+---
+
+## 4. Gaussian Mixture Model (GMM)
+
+### (1). 基本思想
+
+将每一个类用一个高斯分布$N(\mu,\sigma^2)$来描述，因此能够给出每一个点属于其类的可能性（置信度）
+
+![image.png](https://s2.loli.net/2023/03/31/JN47ADRCdcSnsYB.png)
+
+---
+
+### (2). Gaussion Distribution
+
+![image.png](https://s2.loli.net/2023/03/31/ZhsOXK61iDdB9te.png)
+
+---
+
+### (3). GMM数学表征
+
+![image.png](https://s2.loli.net/2023/03/31/9V7J6KMZQrfvIEt.png)
+
+1. k需要给定
+2. 给定k后$p(x)$就是k个高斯分布的线性组合
+3. 对于每个数据点x，都有一个$\pi_k(1\times k)$，其中每个元素表示这个数据点属于第k个高斯分布的概率
+4. 假设每一类的数据点都是由一个高斯分布采样得到的，我们已知数据点去反推这个分布的过程叫做**极大似然估计**
+
+---
+
+#### i. 先验概率
+
+![image.png](https://s2.loli.net/2023/03/31/lfNViJpUIQ1P95O.png)
+
+对于一个数据点，我不知道它的具体位置，这是你要我说它属于每个类别的概率分别是多少，我只能根据这个k个分布的特点来推断，这个概率叫做先验概率
+
+---
+
+#### ii. 后验概率
+
+我们要求的是后验概率，即给定点x的条件下，它属于每个类别的概率分别是多少，即$p(z|x)$
+
+<img src="https://s2.loli.net/2023/03/31/OTGixU1RMPZjSQe.png" alt="image.png" style="zoom:50%;" />
+
+---
+
+#### iii. p(z)
+
+![image.png](https://s2.loli.net/2023/03/31/kApZufK3elWDVmw.png)
+
+- z是一个k维的布尔向量，表示点属于某个分布的事件，因此这个向量中只有一个元素为1，其他为0
+- $\pi$是一个k维的向量，表示点属于某个分布的概率，因此有$\sum^K_{k=1}\pi_k=1$
+- 当z待定的时候，$p(z)$就可以写成上述的连乘形式（一般形式），当z一旦确定，他就会坍缩成②式
+
+---
+
+#### iv. p(x|z)
+
+![image.png](https://s2.loli.net/2023/03/31/cCVPNuDo7UFdGix.png)
+
+1. $p(x|z_k=_0)$：表示我已经确定点x属于某个高斯分布，这是的概率p(x|z)就是该高斯分布的概率分布
+2. 因此，在z还没有确定的时候p(x|z)可以写成连成形式，z一旦确定，它就会坍缩成上式
+
+---
+
+#### v. p(x)
+
+根据边缘分布公式：$p(x)=\sum_z p(x,z)$
+
+根据条件概率公式：$p(x|z)=\frac{p(x,z)}{p(z)}$，因此有$p(x,z)=p(x|z)p(z)$
+
+因此有：$p(x)=\sum_zp(z)p(x|z)$
+
+![image.png](https://s2.loli.net/2023/03/31/ndED2yYJmeLa9q4.png)
+
+---
+
+#### vi. p(z|x)
+
+![image.png](https://s2.loli.net/2023/03/31/9oyb4YvzVqrHC26.png)
+
+---
+
+#### vii. 高斯模型的参数估计
+
+以上推断基于高斯模型的参数$\mu,\sigma$已知，但在实际应用中能拿到的只有数据点和k，$\mu_k,\sigma_k$需要估计：**极大似然估计（MLE）**
+
+即，要最大化损失函数：
+
+![image.png](https://s2.loli.net/2023/03/31/F89WEncrsOfojZb.png)
+
+但是存在一个问题，在应用中有可能出现一个数据点单独成一类的情况，一个数据点的高斯分布标准差为0，这会导致概率趋近于无穷大，在应用中有以下几种解决办法：
+
+1. 如果某一个高斯分布的标准差很小，就把它随机初始化成一个数值
+2. 采用Maximun-a-Posterior或Bayesian Approach代替MLE
+
+---
+
+### (4). 求解GMM
+
+1. 初始化：
+   1. k个类的中心坐标$\mu_k$
+   2. k个类在各个方向上的方差$\Sigma_k$
+   3. 权重$\pi_k$
+
+2. E-Step：估算后验概率（N*K的矩阵，每一个点对每一个类都有一个值）
+
+   1. 分子：权重\*点在某个高斯分布下的值
+   2. 分母：点在每个高斯分布下的值的加权求和
+
+   <img src="https://s2.loli.net/2023/03/31/cizhwsJPRXMU9IV.png" alt="image.png" style="zoom:50%;" />
+
+3. M-Step：根据后验概率反过来优化参数
+
+   1. 目标：最大化损失函数
+
+      <img src="https://s2.loli.net/2023/03/31/lb6ScXjipR1kgUK.png" alt="image.png" style="zoom:50%;" />
+
+   2. 方法：loop每个类，固定两个参数，对另一个求导=0
+
+      <img src="https://s2.loli.net/2023/03/31/eqC5sYvWfJlcX9h.png" alt="image.png" style="zoom:50%;" />
+
+      - $\mu_k$:
+        - 分母：第k个类的点数目
+        - 分子：用第k类的N个后验概率对点坐标加权求和
+      - $\sigma_k$：
+        - 分母：第k个类的点数目
+        - 分子：用第k类的N个后验概率对方差加权求和
+      - $\pi_k$：
+        - 分母：所有点的个数
+        - 分子：第k个类的点数目
+
+
+
+<img src="https://s2.loli.net/2023/03/31/y3XqThGkug7Z1VW.png" alt="image.png" style="zoom:50%;" />
+
+---
+
+## 5. Spectral Clustering
+
+上述两种聚类方法都工作在欧氏空间中；
+
+谱聚类工作在Graph中，看重点与点之间的连接性；
+
+### (1). 无向图
+
+![image.png](https://s2.loli.net/2023/03/31/ROYDLb3f8xP6zhH.png)
+
+- 无向图可以用一个$n\times n$的矩阵W表示（n为点的个数），其中$w_{ij}$表示点i和点j之间边的权重
+- 权重定义为点与点之间的相似度（距离越近，相似度越大）
+- 未连接的点之间的边权重为0
+- 点与自身不连接（$w_{ii}=0$ ，即对角线为0）
+
+---
+
+### (2). 建图
+
+![image.png](https://s2.loli.net/2023/03/31/5eWdYGqX3tVcvFr.png)
+
+三种策略：
+
+1. Radius Neighbors：将每个点的一定半径内的点进行连接
+2. KNN Neighbors：将每个点和它的K个邻居进行连接
+   1. “or” KNN
+   2. “and” KNN
+3. Fully Connected：全连接
+
+对于$w_{ij}$的具体表示，通常采用高斯核函数RBF：$exp({-\frac{\norm{x_i-x_j}^2_2}{2\sigma^2}})$
+
+---
+
+### (3). 数据准备
+
+#### i. Degree Matrix
+
+$$
+D=diag(d_1,d_2,\dots,d_n)\ where\ d_{ii}=\sum^n_{j=1}w_{ij}
+$$
+
+#### ii. Unnormalized Laplacian Matrix
+
+$$
+L=D-W
+$$
+
+#### iii. Normalized Laplacian Matrix
+
+$$
+L_{sym}=I-D^{-\frac12}WD^{-\frac12}\\
+L_{rw}=I-D^{-1}W
+$$
+
+---
+
+### (4). 算法实施步骤
+
+1. 建立adjacency matrix W (n x n)
+2. 计算Laplacian Matrix（unnormalized or normalized）
+3. 计算L矩阵的特征值和特征向量
+4. 取特征值最小的k个特征向量组成特征向量矩阵V (n x k)
+5. 将V的每一行看作一个点，共n个点进行kmeans聚类
+
+---
+
+### (5). 算法分析
+
+#### i. L矩阵归一化与未归一化的区别
+
+![image.png](https://s2.loli.net/2023/03/31/Oxr6yCdTJYZK2Uo.png)
+
+#### ii. 自动找类别数的能力
+
+可以将L矩阵的特征值全部列出，如果发现断崖式上升，则取前k个特征值较小的类即可
+
+![image.png](https://s2.loli.net/2023/03/31/ouUaN1f6ZPgSEjt.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
