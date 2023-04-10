@@ -1210,7 +1210,7 @@ $$
 
    ![image.png](https://s2.loli.net/2023/04/03/KwRs2Hm9goqe1IW.png)
 
-   ![image.png](https://s2.loli.net/2023/04/03/jVI8acPOGU62pQR.png)
+   ![image.png](https://s2.loli.net/2023/04/03/hTaP3wgG6yCr1E4.png)
 
 ---
 
@@ -1218,7 +1218,151 @@ $$
 
 ![image.png](https://s2.loli.net/2023/04/03/dp8hYUwubO29IrV.png)
 
+---
 
+# VI. Deep Learning on Point Cloud
+
+## 1. VoxNet
+
+![image.png](https://s2.loli.net/2023/04/08/UArCM78qXRfuNzp.png)
+
+将点云建立成Voxel Grid，每个cell中填入的东西可能是二值，点数或其他概率模型，对该Voxel Grid直接进行三维卷积，池化，全连接等操作输出结果
+
+问题：分辨率，内存，计算量
+
+---
+
+## 2. MVCNN
+
+![image.png](https://s2.loli.net/2023/04/08/iSwhq87cBYCDQuF.png)
+
+从多个角度投影成二维图像，再对这些二维图像分别卷积和池化
+
+问题：计算量大
+
+---
+
+## 3. PointNet
+
+
+
+### (1). 网络结构
+
+![image.png](https://s2.loli.net/2023/04/08/47Td9sceqmgFHJY.png)
+
+- 输入$n\times3$的点云数据，对每个点分别运用同一个mlp进行encoding，得到$n\times c_1$的特征数据；
+
+- 按同样原理进行多个mlp encoding，特征向量的长度逐层增加（64→128→1024）
+
+- 对n个点的特征向量进行maxpooling，得到$1\times1024$的全局特征(global feature)
+
+- 根据不同任务对全局特征进行处理（例如目标识别，则后接mlp）
+
+  ---
+
+### (2). 稳定性分析
+
+![image.png](https://s2.loli.net/2023/04/08/8QUsyqKmIdxBTOS.png)
+
+---
+
+### (3). 关键点集和上界形状
+
+![image.png](https://s2.loli.net/2023/04/08/AgYLNcubKl273Io.png)
+
+![image.png](https://s2.loli.net/2023/04/08/Tx5zfqEO3IM1Q4d.png)
+
+关键点集可以用作点云的特征点
+
+---
+
+### (4). PointNet优化
+
+VFE：两个PointNet串联，加深网络
+
+![image.png](https://s2.loli.net/2023/04/08/OkLFjPtBSba7eyi.png)
+
+问题：缺少逐层的特征提取（类似CNN的）
+
+---
+
+## 4. PointNet++
+
+### (1). 网络结构
+
+![image.png](https://s2.loli.net/2023/04/08/D2K1FgxHjWc5d9r.png)
+
+#### i. Encoder
+
+![image.png](https://s2.loli.net/2023/04/08/fo2kwtgmDq3M8GN.png)
+
+输入：$N\times(3+C)$，其中3表示三维坐标，C表示反射率，强度等信息
+
+Encoder部分分为两个重复的set abstraction过程，其中每个都包括三个步骤：
+
+1. Sampling：采用FPS随机采样N’个点
+2. Grouping：一般采用Radius+random Sampling或KNN Sampling，保证每个group点的数量相同
+3. PointNet：对每个group内的点（先求相对中心点的坐标）输入PointNet，输出一个group global feature
+
+其中Grouping过程有几种优化方法，如：Multi-Scale Grouping和Multi-Resolution Grouping
+
+| ![image-20230408230907174](C:/Users/Administrator/AppData/Roaming/Typora/typora-user-images/image-20230408230907174.png) | ![image-20230408230855876](C:/Users/Administrator/AppData/Roaming/Typora/typora-user-images/image-20230408230855876.png) |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+
+---
+
+#### ii. Segmentation
+
+因为在Encoding中进行了两步downsampling，所以需要两步interpolation对点进行复原
+
+![image.png](https://s2.loli.net/2023/04/09/bKdkjH6CSNIu1eD.png)
+
+第一步interpolation对应第二步downsampling，取那些在这一步中被downsample掉的点，从encoding步骤中把他们的特征向量(C1)copy过来，再和该点的kNN的特征向量(C2)的加权平均（权重取决于坐标的欧氏距离，距离越远权重越小）组合成一个向量(C1+C2)，再通过一个MLP将通道数变为C3
+
+---
+
+#### iii. Classification
+
+将downsampling后得到的local features输入pointnet，再经过MLP进行分类
+
+---
+
+### (2). 效果分析
+
+![image.png](https://s2.loli.net/2023/04/09/VuH8dlZhsIJ1vkw.png)
+
+![image.png](https://s2.loli.net/2023/04/09/FTPwbdrq1gMaWhK.png)
+
+DP：Dropout
+
+---
+
+## 5. DGCNN（Dynamic Graph Convolutional Neural Network）
+
+### (1). 网络结构
+
+![image.png](https://s2.loli.net/2023/04/09/eLwNH7AUxu3ISgT.png)
+
+![image.png](https://s2.loli.net/2023/04/09/HVsYKk6h7rNv9Of.png)
+
+主要创新：将PointNet中的MLP连接换成了EdgeConv，其原理：
+
+对每个点：
+
+1. 通过mlp将其自身映射到m维特征空间
+2. 通过另一个mlp将其（k个最近邻（特征空间里的kNN）都减去该点自身特征的差）映射到m维特征空间
+3. 将这k个特征向量均加上自身映射的特征向量
+4. 通过maxpooling将这k个特征向量max到一个特征向量
+
+---
+
+### (2). 分析
+
+采用特征空间kNN可以找到语义上的相似点
+
+![image.png](https://s2.loli.net/2023/04/09/ReMdCYNqTEyrLDi.png)
+
+![image.png](https://s2.loli.net/2023/04/09/XPMqaC9mrHLtA7s.png)
 
 
 
